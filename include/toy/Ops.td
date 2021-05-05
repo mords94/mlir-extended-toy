@@ -351,26 +351,45 @@ def ZerosOp : Toy_Op<"zeros",
     [NoSideEffect]> {
   let summary = "zeros operation";
 
-  let arguments = (ins I64Attr:$size_n, I64Attr:$size_m);
+  let arguments = (ins I64:$size_n, I64:$size_m);
 
-  let results = (outs F64Tensor);
+  let results = (outs I64Tensor);
 
+  // let parser = [{ return ::parseZerosOp(parser, result); }];
 
   // let results = (outs F64ElementsAttr);
 
-  let assemblyFormat = "$size_n`,`$size_m attr-dict `:` type(results)";
+  let assemblyFormat = " `[`$size_n`,`$size_m attr-dict`]` `:` type(results)";
 
   // Enable registering canonicalization patterns with this operation.
   let hasCanonicalizer = 0;
 
   let builders = [
-    OpBuilder<(ins "size_t":$size_n, "size_t":$size_m )>
+    OpBuilder<(ins "Value":$size_n, "Value":$size_m)>,
   ];
 
-
-
-  // Invoke a static verify method to verify this transpose operation.
   // let verifier = [{ return ::verify(*this); }];
+}
+
+def ScalarOp : Toy_Op<"scalar",
+    [ConstantLike, NoSideEffect]> {
+  let summary = "scalar operation";
+
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs AnyType);
+
+  let builders = [
+    OpBuilder<(ins "Attribute":$value),
+    [{ build($_builder, $_state, value.getType(), value); }]>];
+
+  let extraClassDeclaration = [{
+    Attribute getValue() { return (*this)->getAttr("value"); }
+
+    /// Returns true if a constant operation can be built with the given value
+    /// and result type.
+    static bool isBuildableWith(Attribute value, Type type);
+  }];
+
 }
 
 #endif // TOY_OPS

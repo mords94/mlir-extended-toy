@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
@@ -485,6 +486,21 @@ private:
     data.push_back(cast<NumberExprAST>(expr).getValue());
   }
 
+
+  std::vector<int> getOperandValues(llvm::ArrayRef<std::unique_ptr<ExprAST>> exprs) {
+    std::vector<int> operandValues;
+    for (auto &expr : exprs) {
+      auto arg = mlirGen(*expr);
+      if (!arg)
+        return operandValues;
+      if(expr->getKind() == toy::ExprAST::Expr_Num) {
+           operandValues.push_back((int)cast<NumberExprAST>(*expr).getValue());
+      }
+    }
+
+    return operandValues;
+  }
+
   /// Emit a call expression. It emits specific operations for the `transpose`
   /// builtin. Other identifiers are assumed to be user-defined functions.
   mlir::Value mlirGen(CallExprAST &call) {
@@ -493,6 +509,8 @@ private:
 
     // Codegen the operands first.
     SmallVector<mlir::Value, 4> operands;
+
+  
     for (auto &expr : call.getArgs()) {
       auto arg = mlirGen(*expr);
       if (!arg)
@@ -509,6 +527,35 @@ private:
         return nullptr;
       }
       return builder.create<TransposeOp>(location, operands[0]);
+    }
+
+    if (callee == "zeros") {
+      if (call.getArgs().size() != 2) {
+        emitError(location, "MLIR codegen encountered an error: toy.zeros "
+                            "should have 2 arguments");
+        return nullptr;
+      }
+
+      // std::vector<int> operandValues = getOperandValues(call.getArgs());
+
+      // std::vector<double> data(operandValues[0], 0);
+      // mlir::Type elementType = builder.getF64Type();
+      // auto dataType = mlir::RankedTensorType::get({operandValues[0], operandValues[1]}, elementType);
+
+      // mlir::Attribute attr = mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
+
+
+      // auto datatTypeZeros = mlir::RankedTensorType::get({}, builder.getF64Type());
+
+      // mlir::DenseElementsAttr attrZeros = mlir::DenseElementsAttr::get(mlir::RankedTensorType::get({}, builder.getI64Type()), llvm::makeArrayRef(operandValues));
+      
+
+      // mlir::RankedTensorType::get(shape, builder.getF64Type());
+
+      operands[0].dump();
+
+      return builder.create<ZerosOp>(location, operands[0], operands[1]);
+      // return builder.create<mlir::ConstantFloatOp>(location, attr);
     }
 
     // Otherwise this is a call to a user-defined function. Calls to
@@ -538,8 +585,10 @@ private:
 
   /// Emit a constant for a single number (FIXME: semantic? broadcast?)
   mlir::Value mlirGen(NumberExprAST &num) {
-    return builder.create<ConstantOp>(loc(num.loc()), num.getValue());
+    return builder.create<mlir::ConstantIntOp>(loc(num.loc()), (int64_t)num.getValue(), builder.getI64Type());
+    // return builder.create<ConstantOp>(loc(num.loc()), num.getValue());
   }
+
 
   /// Dispatch codegen for the right expression subclass using RTTI.
   mlir::Value mlirGen(ExprAST &expr) {

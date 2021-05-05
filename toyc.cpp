@@ -29,6 +29,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/Passes.h"
 
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
@@ -266,6 +267,7 @@ int main(int argc, char **argv) {
   mlir::MLIRContext context;
   // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<mlir::toy::ToyDialect>();
+  context.getOrLoadDialect<mlir::StandardOpsDialect>();
 
   mlir::OwningModuleRef module;
   if (int error = loadAndProcessMLIR(context, module))

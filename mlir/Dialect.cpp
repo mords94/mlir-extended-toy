@@ -229,10 +229,6 @@ static mlir::LogicalResult verify(ConstantOp op) {
   return verifyConstantForType(op.getResult().getType(), op.value(), op);
 }
 
-// static mlir::LogicalResult verify(ZerosOp op) {
-//   return verifyConstantForType(op.getResult().getType(), op.value(), op);
-// }
-
 static mlir::LogicalResult verify(StructConstantOp op) {
   return verifyConstantForType(op.getResult().getType(), op.value(), op);
 }
@@ -411,16 +407,33 @@ static mlir::LogicalResult verify(TransposeOp op) {
 //===----------------------------------------------------------------------===//
 
 
-void ZerosOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                           size_t size_n, size_t size_m) {
-  mlir::Type resultType = RankedTensorType::get({size_n, size_m}, builder.getF64Type());
-  
-  build(builder, state, resultType, size_n, size_m);
 
-  // state.addAttribute("callee", builder.getSymbolRefAttr(callee));
+/**
+
+determinant(zeros(n,n))
+
+
+*/
+
+// void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &odsState, size_t size_n, size_t size_m);
+void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
+                           mlir::Value n, mlir::Value m) {
+  mlir::Type resultType = UnrankedTensorType::get(b.getI64Type());
+  // mlir::Type resultType = UnrankedTensorType::get(b.getI64Type());
+
+  
+
+  state.addTypes(resultType);
+  state.addOperands(n);
+  state.addOperands(m);
+ 
 }
 
-
+// void ScalarOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
+//                            mlir::Attribute value) {
+//   state.addTypes(value.getType());
+//   state.addAttributes(value);
+// }
 
 //===----------------------------------------------------------------------===//
 // Toy Types
@@ -581,6 +594,12 @@ mlir::Operation *ToyDialect::materializeConstant(mlir::OpBuilder &builder,
                                                  mlir::Attribute value,
                                                  mlir::Type type,
                                                  mlir::Location loc) {
+
+
+  // if(type.isa<ScalarOp>()) {
+  //    return builder.create<ScalarOp>(loc, type,
+  //                                           value.cast<mlir::ArrayAttr>());
+  // }                                        
   if (type.isa<StructType>())
     return builder.create<StructConstantOp>(loc, type,
                                             value.cast<mlir::ArrayAttr>());
