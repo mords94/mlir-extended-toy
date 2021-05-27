@@ -353,23 +353,43 @@ def ZerosOp : Toy_Op<"zeros",
 
   let arguments = (ins I64:$size_n, I64:$size_m);
 
-  let results = (outs I64Tensor);
+  let results = (outs F64Tensor);
 
   // let parser = [{ return ::parseZerosOp(parser, result); }];
 
-  // let results = (outs F64ElementsAttr);
+  let results = (outs F64ElementsAttr);
 
-  let assemblyFormat = " `[`$size_n`,`$size_m attr-dict`]` `:` type(results)";
+  let assemblyFormat = "` ``[`$size_n`,`$size_m`]` attr-dict `:` type(results)";
 
   // Enable registering canonicalization patterns with this operation.
   let hasCanonicalizer = 0;
 
   let builders = [
-    OpBuilder<(ins "Value":$size_n, "Value":$size_m)>,
+    OpBuilder<(ins "int64_t":$size_n, "int64_t":$size_m, "Value": $n, "Value":$m)>,
   ];
 
-  // let verifier = [{ return ::verify(*this); }];
 }
+
+def DetOp : Toy_Op<"det",
+    [NoSideEffect]> {
+  let summary = "determinant operation on nxn matrix";
+
+  let arguments = (ins F64Tensor:$matrix);
+
+  let results = (outs F64);
+
+  let assemblyFormat = "` ` `(`type($matrix) $matrix`)` attr-dict `->` type(results)";
+
+  let hasCanonicalizer = 0;
+
+  let builders = [
+    OpBuilder<(ins "Value":$matrix)>,
+  ];
+  
+  let verifier = [{ return ::verify(*this); }];
+
+}
+
 
 def ScalarOp : Toy_Op<"scalar",
     [ConstantLike, NoSideEffect]> {

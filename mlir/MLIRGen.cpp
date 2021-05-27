@@ -10,6 +10,7 @@
 // for the Toy language.
 //
 //===----------------------------------------------------------------------===//
+#include <iostream>
 
 #include "toy/MLIRGen.h"
 #include "toy/AST.h"
@@ -501,6 +502,7 @@ private:
     return operandValues;
   }
 
+
   /// Emit a call expression. It emits specific operations for the `transpose`
   /// builtin. Other identifiers are assumed to be user-defined functions.
   mlir::Value mlirGen(CallExprAST &call) {
@@ -529,33 +531,39 @@ private:
       return builder.create<TransposeOp>(location, operands[0]);
     }
 
+    if(callee == "det") {
+      if (call.getArgs().size() != 1) {
+        emitError(location, "MLIR codegen encountered an error: toy.zeros "
+                            "should have only 1 argument");
+
+        return nullptr;
+      }
+
+
+      return builder.create<DetOp>(location, operands[0]);
+    }
+
     if (callee == "zeros") {
+
       if (call.getArgs().size() != 2) {
         emitError(location, "MLIR codegen encountered an error: toy.zeros "
                             "should have 2 arguments");
         return nullptr;
       }
 
-      // std::vector<int> operandValues = getOperandValues(call.getArgs());
-
-      // std::vector<double> data(operandValues[0], 0);
-      // mlir::Type elementType = builder.getF64Type();
-      // auto dataType = mlir::RankedTensorType::get({operandValues[0], operandValues[1]}, elementType);
-
-      // mlir::Attribute attr = mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
-
-
-      // auto datatTypeZeros = mlir::RankedTensorType::get({}, builder.getF64Type());
-
-      // mlir::DenseElementsAttr attrZeros = mlir::DenseElementsAttr::get(mlir::RankedTensorType::get({}, builder.getI64Type()), llvm::makeArrayRef(operandValues));
       
 
-      // mlir::RankedTensorType::get(shape, builder.getF64Type());
+      std::vector<int> sizes;
 
-      operands[0].dump();
+      
+      for (auto &expr : call.getArgs()) {
+        auto arg = mlirGen(*expr);
+        if(expr->getKind() == ExprAST::ExprASTKind::Expr_Num) {
+          sizes.push_back((int64_t)(static_cast<NumberExprAST*>(expr.get())->getValue()));
+        }
+      }
 
-      return builder.create<ZerosOp>(location, operands[0], operands[1]);
-      // return builder.create<mlir::ConstantFloatOp>(location, attr);
+      return builder.create<ZerosOp>(location, sizes[0], sizes[1], operands[0], operands[1]);
     }
 
     // Otherwise this is a call to a user-defined function. Calls to

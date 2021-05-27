@@ -128,6 +128,7 @@ static void printBinaryOp(mlir::OpAsmPrinter &printer, mlir::Operation *op) {
   printer.printFunctionalType(op->getOperandTypes(), op->getResultTypes());
 }
 
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 
@@ -412,23 +413,41 @@ static mlir::LogicalResult verify(TransposeOp op) {
 
 determinant(zeros(n,n))
 
-
 */
 
 // void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &odsState, size_t size_n, size_t size_m);
-void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
-                           mlir::Value n, mlir::Value m) {
-  mlir::Type resultType = UnrankedTensorType::get(b.getI64Type());
-  // mlir::Type resultType = UnrankedTensorType::get(b.getI64Type());
+// static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::Value size_n, ::mlir::Value size_m, ::mlir::DenseElementsAttr value);
+void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &state, int64_t size_m, int64_t size_n, mlir::Value m, mlir::Value n) {
+
+  mlir::Type resultType = RankedTensorType::get({size_m, size_n}, b.getF64Type());
 
   
 
   state.addTypes(resultType);
   state.addOperands(n);
   state.addOperands(m);
- 
 }
 
+void DetOp::build(mlir::OpBuilder &b, mlir::OperationState &state, mlir::Value matrix) {
+  state.addTypes(b.getF64Type());
+  state.addOperands(matrix);
+}
+
+static mlir::LogicalResult verify(DetOp op) {
+  //  if (getOperands().getType().getRank()) {
+      auto opType = op.getOperand().getType().dyn_cast<RankedTensorType>();
+
+      if(opType.getRank() != 2) {
+         return op->emitOpError("Determinant can be only calculated on 2 dimensionsal matrices");
+      }
+
+      if(opType.getShape()[0] != opType.getShape()[1]) {
+        return op->emitOpError("Determinant can be only calculated on square matrices");
+      }
+      
+      return mlir::success();
+    // }
+}
 // void ScalarOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
 //                            mlir::Attribute value) {
 //   state.addTypes(value.getType());
