@@ -90,14 +90,22 @@ private:
     return std::make_unique<ReturnExprAST>(std::move(loc), std::move(expr));
   }
 
-  /// Parse a literal number.
-  /// numberexpr ::= number
-  std::unique_ptr<ExprAST> parseNumberExpr() {
+  /// floatexpr ::= number
+  std::unique_ptr<ExprAST> parseFloatExpr() {
     auto loc = lexer.getLastLocation();
     auto result =
-        std::make_unique<NumberExprAST>(std::move(loc), lexer.getValue());
-    lexer.consume(tok_number);
-    return std::move(result);
+        std::make_unique<FloatExprAST>(std::move(loc), lexer.getFloatValue());
+    lexer.consume(tok_float);
+    return result;
+  }
+
+  /// intexpr ::= number
+  std::unique_ptr<ExprAST> parseIntExpr() {
+    auto loc = lexer.getLastLocation();
+    auto result =
+        std::make_unique<IntExprAST>(std::move(loc), lexer.getIntValue());
+    lexer.consume(tok_int);
+    return result;
   }
 
   /// Parse a literal array expression.
@@ -118,9 +126,9 @@ private:
         if (!values.back())
           return nullptr; // parse error in the nested array.
       } else {
-        if (lexer.getCurToken() != tok_number)
+        if (lexer.getCurToken() != tok_float)
           return parseError<ExprAST>("<num> or [", "in literal expression");
-        values.push_back(parseNumberExpr());
+        values.push_back(parseFloatExpr());
       }
 
       // End of this list on ']'
@@ -183,8 +191,8 @@ private:
         values.push_back(parseTensorLiteralExpr());
         if (!values.back())
           return nullptr;
-      } else if (lexer.getCurToken() == tok_number) {
-        values.push_back(parseNumberExpr());
+      } else if (lexer.getCurToken() == tok_float) {
+        values.push_back(parseFloatExpr());
         if (!values.back())
           return nullptr;
       } else {
@@ -290,8 +298,10 @@ private:
       return nullptr;
     case tok_identifier:
       return parseIdentifierExpr();
-    case tok_number:
-      return parseNumberExpr();
+    case tok_float:
+      return parseFloatExpr();
+    case tok_int:
+      return parseIntExpr();
     case '(':
       return parseParenExpr();
     case '[':
@@ -363,8 +373,8 @@ private:
 
     auto type = std::make_unique<VarType>();
 
-    while (lexer.getCurToken() == tok_number) {
-      type->shape.push_back(lexer.getValue());
+    while (lexer.getCurToken() == tok_float) {
+      type->shape.push_back(lexer.getFloatValue());
       lexer.getNextToken();
       if (lexer.getCurToken() == ',')
         lexer.getNextToken();

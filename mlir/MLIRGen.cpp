@@ -406,7 +406,7 @@ private:
     // tensor literal.
     return mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
   }
-  mlir::DenseElementsAttr getConstantAttr(NumberExprAST &lit) {
+  mlir::DenseElementsAttr getConstantAttr(FloatExprAST &lit) {
     // The type of this attribute is tensor of 64-bit floating-point with no
     // shape.
     mlir::Type elementType = builder.getF64Type();
@@ -427,7 +427,7 @@ private:
     std::vector<mlir::Type> typeElements;
 
     for (auto &var : lit.getValues()) {
-      if (auto *number = llvm::dyn_cast<NumberExprAST>(var.get())) {
+      if (auto *number = llvm::dyn_cast<FloatExprAST>(var.get())) {
         attrElements.push_back(getConstantAttr(*number));
         typeElements.push_back(getType(llvm::None));
       } else if (auto *lit = llvm::dyn_cast<LiteralExprAST>(var.get())) {
@@ -483,8 +483,8 @@ private:
       return;
     }
 
-    assert(isa<NumberExprAST>(expr) && "expected literal or number expr");
-    data.push_back(cast<NumberExprAST>(expr).getValue());
+    assert(isa<FloatExprAST>(expr) && "expected literal or number expr");
+    data.push_back(cast<FloatExprAST>(expr).getValue());
   }
 
 
@@ -494,8 +494,8 @@ private:
       auto arg = mlirGen(*expr);
       if (!arg)
         return operandValues;
-      if(expr->getKind() == toy::ExprAST::Expr_Num) {
-           operandValues.push_back((int)cast<NumberExprAST>(*expr).getValue());
+      if(expr->getKind() == toy::ExprAST::Expr_NumFloat) {
+           operandValues.push_back((int)cast<FloatExprAST>(*expr).getValue());
       }
     }
 
@@ -557,9 +557,8 @@ private:
 
       
       for (auto &expr : call.getArgs()) {
-        auto arg = mlirGen(*expr);
-        if(expr->getKind() == ExprAST::ExprASTKind::Expr_Num) {
-          sizes.push_back((int64_t)(static_cast<NumberExprAST*>(expr.get())->getValue()));
+        if(expr->getKind() == ExprAST::ExprASTKind::Expr_NumInt) {
+          sizes.push_back((int64_t)(static_cast<IntExprAST*>(expr.get())->getValue()));
         }
       }
 
@@ -592,9 +591,13 @@ private:
   }
 
   /// Emit a constant for a single number (FIXME: semantic? broadcast?)
-  mlir::Value mlirGen(NumberExprAST &num) {
-    return builder.create<mlir::ConstantIntOp>(loc(num.loc()), (int64_t)num.getValue(), builder.getI64Type());
-    // return builder.create<ConstantOp>(loc(num.loc()), num.getValue());
+  mlir::Value mlirGen(FloatExprAST &num) {
+    // return builder.create<mlir::ConstantIntOp>(loc(num.loc()), (int64_t)num.getValue(), builder.getI64Type());
+    return builder.create<ConstantOp>(loc(num.loc()), num.getValue());
+  }
+
+  mlir::Value mlirGen(IntExprAST &num) {
+    return builder.create<ConstantIntOp>(loc(num.loc()), num.getValue());
   }
 
 
@@ -611,8 +614,10 @@ private:
       return mlirGen(cast<StructLiteralExprAST>(expr));
     case toy::ExprAST::Expr_Call:
       return mlirGen(cast<CallExprAST>(expr));
-    case toy::ExprAST::Expr_Num:
-      return mlirGen(cast<NumberExprAST>(expr));
+    case toy::ExprAST::Expr_NumFloat:
+      return mlirGen(cast<FloatExprAST>(expr));
+    case toy::ExprAST::Expr_NumInt:
+      return mlirGen(cast<IntExprAST>(expr));
     default:
       emitError(loc(expr.loc()))
           << "MLIR codegen encountered an unhandled expr kind '"

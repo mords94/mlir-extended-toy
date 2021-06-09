@@ -91,7 +91,8 @@ def ConstantOp : Toy_Op<"constant",
     }]>,
 
     // Build a constant with a given constant floating-point value.
-    OpBuilder<(ins "double":$value)>
+    OpBuilder<(ins "double":$value)>,
+
   ];
 
   // Invoke a static verify method to verify this constant operation.
@@ -100,6 +101,8 @@ def ConstantOp : Toy_Op<"constant",
   // Set the folder bit so that we can implement constant folders.
   let hasFolder = 1;
 }
+
+
 
 def AddOp : Toy_Op<"add",
     [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
@@ -210,7 +213,7 @@ def PrintOp : Toy_Op<"print"> {
 
   // The print operation takes an input tensor to print.
   // We also allow a F64MemRef to enable interop during partial lowering.
-  let arguments = (ins AnyTypeOf<[F64Tensor, F64MemRef]>:$input);
+  let arguments = (ins AnyTypeOf<[F64Tensor, F64MemRef, F64]>:$input);
 
   let assemblyFormat = "$input attr-dict `:` type($input)";
 }
@@ -347,40 +350,54 @@ def TransposeOp : Toy_Op<"transpose",
   let verifier = [{ return ::verify(*this); }];
 }
 
+
+def ConstantIntOp : Toy_Op<"int",
+    [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
+  let summary = "constant int";
+
+  let arguments = (ins I64Attr:$value);
+
+  let results = (outs I64:$result);
+
+  let builders = [
+    OpBuilder<(ins "int64_t":$value)>
+  ];
+}
+
+
 def ZerosOp : Toy_Op<"zeros",
-    [NoSideEffect]> {
+    [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "zeros operation";
 
   let arguments = (ins I64:$size_n, I64:$size_m);
 
-  let results = (outs F64Tensor);
+  let results = (outs F64Tensor:$result);
 
-  // let parser = [{ return ::parseZerosOp(parser, result); }];
-
-  let results = (outs F64ElementsAttr);
 
   let assemblyFormat = "` ``[`$size_n`,`$size_m`]` attr-dict `:` type(results)";
 
-  // Enable registering canonicalization patterns with this operation.
-  let hasCanonicalizer = 0;
+
+  let printer = [{
+    p << getOperationName() << ' ' << getValue() << '(';
+    p << getSize().cast<mlir::IntegerAttr>().getValue() << ") : ";
+    p.printType(getType());
+  }];
 
   let builders = [
-    OpBuilder<(ins "int64_t":$size_n, "int64_t":$size_m, "Value": $n, "Value":$m)>,
+    OpBuilder<(ins "int64_t":$size_n, "int64_t":$size_m, "Value": $n, "Value":$m)>
   ];
 
 }
 
 def DetOp : Toy_Op<"det",
-    [NoSideEffect]> {
+    [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "determinant operation on nxn matrix";
 
   let arguments = (ins F64Tensor:$matrix);
 
-  let results = (outs F64);
+  let results = (outs F64Tensor:$result);
 
   let assemblyFormat = "` ` `(`type($matrix) $matrix`)` attr-dict `->` type(results)";
-
-  let hasCanonicalizer = 0;
 
   let builders = [
     OpBuilder<(ins "Value":$matrix)>,
@@ -388,27 +405,7 @@ def DetOp : Toy_Op<"det",
   
   let verifier = [{ return ::verify(*this); }];
 
-}
-
-
-def ScalarOp : Toy_Op<"scalar",
-    [ConstantLike, NoSideEffect]> {
-  let summary = "scalar operation";
-
-  let arguments = (ins AnyAttr:$value);
-  let results = (outs AnyType);
-
-  let builders = [
-    OpBuilder<(ins "Attribute":$value),
-    [{ build($_builder, $_state, value.getType(), value); }]>];
-
-  let extraClassDeclaration = [{
-    Attribute getValue() { return (*this)->getAttr("value"); }
-
-    /// Returns true if a constant operation can be built with the given value
-    /// and result type.
-    static bool isBuildableWith(Attribute value, Type type);
-  }];
+  let hasCanonicalizer = 1;
 
 }
 

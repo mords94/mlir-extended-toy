@@ -124,6 +124,7 @@ struct BinaryOpLowering : public ConversionPattern {
     return success();
   }
 };
+
 using AddOpLowering = BinaryOpLowering<toy::AddOp, AddFOp>;
 using MulOpLowering = BinaryOpLowering<toy::MulOp, MulFOp>;
 

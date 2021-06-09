@@ -142,6 +142,7 @@ void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   ConstantOp::build(builder, state, dataType, dataAttribute);
 }
 
+
 /// The 'OpAsmParser' class provides a collection of methods for parsing
 /// various punctuation, as well as attributes, operands, types, etc. Each of
 /// these methods returns a `ParseResult`. This class is a wrapper around
@@ -238,6 +239,7 @@ static mlir::LogicalResult verify(StructConstantOp op) {
 /// Infer the output shape of the ConstantOp, this is required by the shape
 /// inference interface.
 void ConstantOp::inferShapes() { getResult().setType(value().getType()); }
+
 
 //===----------------------------------------------------------------------===//
 // AddOp
@@ -409,6 +411,12 @@ static mlir::LogicalResult verify(TransposeOp op) {
 
 
 
+void ConstantIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int64_t value) {
+  state.addAttribute("value", builder.getIntegerAttr(builder.getI64Type(), value));
+  state.addTypes(builder.getI64Type());
+}
+
+
 /**
 
 determinant(zeros(n,n))
@@ -421,17 +429,27 @@ void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &state, int64_t siz
 
   mlir::Type resultType = RankedTensorType::get({size_m, size_n}, b.getF64Type());
 
-  
 
   state.addTypes(resultType);
   state.addOperands(n);
   state.addOperands(m);
 }
 
+
+void ZerosOp::inferShapes() { getResult().setType(result().getType()); }
+
+
+void ConstantIntOp::inferShapes() { getResult().setType(result().getType()); }
+
 void DetOp::build(mlir::OpBuilder &b, mlir::OperationState &state, mlir::Value matrix) {
-  state.addTypes(b.getF64Type());
+  mlir::Type resultType = RankedTensorType::get({1, 1}, b.getF64Type());
+  state.addTypes(resultType);
   state.addOperands(matrix);
 }
+
+void DetOp::inferShapes() { getResult().setType(result().getType()); }
+
+
 
 static mlir::LogicalResult verify(DetOp op) {
   //  if (getOperands().getType().getRank()) {
@@ -448,11 +466,6 @@ static mlir::LogicalResult verify(DetOp op) {
       return mlir::success();
     // }
 }
-// void ScalarOp::build(mlir::OpBuilder &b, mlir::OperationState &state,
-//                            mlir::Attribute value) {
-//   state.addTypes(value.getType());
-//   state.addAttributes(value);
-// }
 
 //===----------------------------------------------------------------------===//
 // Toy Types
@@ -615,10 +628,6 @@ mlir::Operation *ToyDialect::materializeConstant(mlir::OpBuilder &builder,
                                                  mlir::Location loc) {
 
 
-  // if(type.isa<ScalarOp>()) {
-  //    return builder.create<ScalarOp>(loc, type,
-  //                                           value.cast<mlir::ArrayAttr>());
-  // }                                        
   if (type.isa<StructType>())
     return builder.create<StructConstantOp>(loc, type,
                                             value.cast<mlir::ArrayAttr>());

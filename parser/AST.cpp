@@ -39,7 +39,8 @@ private:
   void dump(VarDeclExprAST *varDecl);
   void dump(ExprAST *expr);
   void dump(ExprASTList *exprList);
-  void dump(NumberExprAST *num);
+  void dump(FloatExprAST *num);
+  void dump(IntExprAST *num);
   void dump(LiteralExprAST *node);
   void dump(StructLiteralExprAST *node);
   void dump(VariableExprAST *node);
@@ -78,7 +79,7 @@ template <typename T> static std::string loc(T *node) {
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
 void ASTDumper::dump(ExprAST *expr) {
   llvm::TypeSwitch<ExprAST *>(expr)
-      .Case<BinaryExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
+      .Case<BinaryExprAST, CallExprAST, LiteralExprAST, FloatExprAST, IntExprAST,
             PrintExprAST, ReturnExprAST, StructLiteralExprAST, VarDeclExprAST,
             VariableExprAST>([&](auto *node) { this->dump(node); })
       .Default([&](ExprAST *) {
@@ -110,7 +111,12 @@ void ASTDumper::dump(ExprASTList *exprList) {
 }
 
 /// A literal number, just print the value.
-void ASTDumper::dump(NumberExprAST *num) {
+void ASTDumper::dump(FloatExprAST *num) {
+  INDENT();
+  llvm::errs() << num->getValue() << " " << loc(num) << "\n";
+}
+
+void ASTDumper::dump(IntExprAST *num) {
   INDENT();
   llvm::errs() << num->getValue() << " " << loc(num) << "\n";
 }
@@ -121,7 +127,7 @@ void ASTDumper::dump(NumberExprAST *num) {
 ///    <2,2>[<2>[ 1, 2 ], <2>[ 3, 4 ] ]
 void printLitHelper(ExprAST *litOrNum) {
   // Inside a literal expression we can have either a number or another literal
-  if (auto num = llvm::dyn_cast<NumberExprAST>(litOrNum)) {
+  if (auto num = llvm::dyn_cast<FloatExprAST>(litOrNum)) {
     llvm::errs() << num->getValue();
     return;
   }

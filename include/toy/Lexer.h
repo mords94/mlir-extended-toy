@@ -47,7 +47,8 @@ enum Token : int {
 
   // primary
   tok_identifier = -6,
-  tok_number = -7,
+  tok_int = -7,
+  tok_float = -8,
 };
 
 /// The Lexer is an abstract base class providing all the facilities that the
@@ -84,10 +85,15 @@ public:
     return identifierStr;
   }
 
-  /// Return the current number (prereq: getCurToken() == tok_number)
-  double getValue() {
-    assert(curTok == tok_number);
-    return numVal;
+  double getFloatValue() {
+    assert(curTok == tok_float);
+    return floatVal;
+  }
+
+
+  int64_t getIntValue() {
+    assert(curTok == tok_int);
+    return intVal;
   }
 
   /// Return the location for the beginning of the current token.
@@ -159,8 +165,13 @@ private:
         lastChar = Token(getNextChar());
       } while (isdigit(lastChar) || lastChar == '.');
 
-      numVal = strtod(numStr.c_str(), nullptr);
-      return tok_number;
+      if (numStr.find('.') != std::string::npos) {
+        floatVal = std::stod(numStr);
+        return tok_float;
+      } else {
+        intVal = std::stoll(numStr);
+        return tok_int;
+      }
     }
 
     if (lastChar == '#') {
@@ -193,7 +204,8 @@ private:
   std::string identifierStr;
 
   /// If the current Token is a number, this contains the value.
-  double numVal = 0;
+  double floatVal = 0.0;
+  int64_t intVal = 0;
 
   /// The last value returned by getNextChar(). We need to keep it around as we
   /// always need to read ahead one character to decide when to end a token and

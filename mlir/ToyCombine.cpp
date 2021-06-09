@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "toy/Dialect.h"
 #include <numeric>
+#include <iostream>
 using namespace mlir;
 using namespace toy;
 
@@ -41,8 +42,25 @@ OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
   return structAttr[elementIndex];
 }
 
-/// This is an example of a c++ rewrite pattern for the TransposeOp. It
-/// optimizes the following scenario: transpose(transpose(x)) -> x
+struct SimplifyDetOnZeroMatrix : public mlir::OpRewritePattern<DetOp> {
+  SimplifyDetOnZeroMatrix(mlir::MLIRContext *context) : OpRewritePattern<DetOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult matchAndRewrite(DetOp op, mlir::PatternRewriter &rewriter) const override {
+    mlir::Value detInput = op.getOperand();
+    ZerosOp detInputOp = detInput.getDefiningOp<ZerosOp>();
+
+    if (!detInputOp)
+      return failure();
+
+
+    Value newValue = rewriter.create<ConstantOp>(op.getLoc(), (double)0.0);
+
+    rewriter.replaceOp(op, {newValue});
+    return success();
+  }
+};
+
+
 struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
   /// We register this pattern to match every toy.transpose in the IR.
   /// The "benefit" is used by the framework to order the patterns and process
@@ -75,6 +93,11 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<SimplifyRedundantTranspose>(context);
+}
+
+void DetOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<SimplifyDetOnZeroMatrix>(context);
 }
 
 /// Register our patterns as "canonicalization" patterns on the ReshapeOp so
