@@ -562,7 +562,7 @@ private:
         }
       }
 
-      return builder.create<ZerosOp>(location, sizes[0], sizes[1], operands[0], operands[1]);
+      return builder.create<ZerosOp>(location, sizes[0], sizes[1]);
     }
 
     // Otherwise this is a call to a user-defined function. Calls to

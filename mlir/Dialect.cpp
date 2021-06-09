@@ -417,22 +417,13 @@ void ConstantIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 }
 
 
-/**
-
-determinant(zeros(n,n))
-
-*/
-
-// void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &odsState, size_t size_n, size_t size_m);
-// static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::Value size_n, ::mlir::Value size_m, ::mlir::DenseElementsAttr value);
-void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &state, int64_t size_m, int64_t size_n, mlir::Value m, mlir::Value n) {
+void ZerosOp::build(mlir::OpBuilder &b, mlir::OperationState &state, int64_t size_m, int64_t size_n) {
 
   mlir::Type resultType = RankedTensorType::get({size_m, size_n}, b.getF64Type());
-
+  state.addAttribute("size_m", b.getIntegerAttr(b.getI64Type(), size_m));
+  state.addAttribute("size_n", b.getIntegerAttr(b.getI64Type(), size_n));
 
   state.addTypes(resultType);
-  state.addOperands(n);
-  state.addOperands(m);
 }
 
 
@@ -452,7 +443,6 @@ void DetOp::inferShapes() { getResult().setType(result().getType()); }
 
 
 static mlir::LogicalResult verify(DetOp op) {
-  //  if (getOperands().getType().getRank()) {
       auto opType = op.getOperand().getType().dyn_cast<RankedTensorType>();
 
       if(opType.getRank() != 2) {
@@ -464,7 +454,6 @@ static mlir::LogicalResult verify(DetOp op) {
       }
       
       return mlir::success();
-    // }
 }
 
 //===----------------------------------------------------------------------===//

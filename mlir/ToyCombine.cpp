@@ -52,7 +52,6 @@ struct SimplifyDetOnZeroMatrix : public mlir::OpRewritePattern<DetOp> {
     if (!detInputOp)
       return failure();
 
-
     Value newValue = rewriter.create<ConstantOp>(op.getLoc(), (double)0.0);
 
     rewriter.replaceOp(op, {newValue});

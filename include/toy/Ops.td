@@ -369,7 +369,7 @@ def ZerosOp : Toy_Op<"zeros",
     [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "zeros operation";
 
-  let arguments = (ins I64:$size_n, I64:$size_m);
+  let arguments = (ins I64Attr:$size_n, I64Attr:$size_m);
 
   let results = (outs F64Tensor:$result);
 
@@ -384,7 +384,7 @@ def ZerosOp : Toy_Op<"zeros",
   }];
 
   let builders = [
-    OpBuilder<(ins "int64_t":$size_n, "int64_t":$size_m, "Value": $n, "Value":$m)>
+    OpBuilder<(ins "int64_t":$size_n, "int64_t":$size_m)>
   ];
 
 }
@@ -393,9 +393,9 @@ def DetOp : Toy_Op<"det",
     [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "determinant operation on nxn matrix";
 
-  let arguments = (ins F64Tensor:$matrix);
+  let arguments = (ins AnyTypeOf<[F64Tensor, AnyMemRef]>:$matrix);
 
-  let results = (outs F64Tensor:$result);
+  let results = (outs AnyTypeOf<[F64Tensor, AnyMemRef]>:$result);
 
   let assemblyFormat = "` ` `(`type($matrix) $matrix`)` attr-dict `->` type(results)";
 
